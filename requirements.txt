@@ -1,0 +1,12 @@
+# Install PyTorch separately for macOS:
+# pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+
+# Other dependencies
+opencv-python==4.10.0.84
+numpy==1.26.4
+pandas==2.2.2
+scikit-learn==1.5.2
+matplotlib==3.9.2
+seaborn==0.13.2
+tqdm==4.66.4
+jupyter==1.0.0
