@@ -22,8 +22,17 @@ We build and compare multiple models to classify violence from surveillance vide
    - Used for **training** and **within-dataset evaluation**
 
 2. **RWF-2000 (Real-World Fights Dataset)**  
-   - Real surveillance footage of public fights (fight vs non-fight)  
-   - Used for **cross-dataset generalization testing** and fine-tuning
+   - Real surveillance footage of public fights (originally Fight vs NonFight).  
+   - The full dataset (~12 GB, ~2,000 clips) was **too large for initial experiments**,  
+     so we sampled **50 videos per class (100 total)** for quick testing and fine-tuning.  
+   - Data was downloaded via `kagglehub` and filtered using a Python script that  
+     randomly selected balanced subsets of `.avi` files.  
+   - We **manually separated** the `Fight` class into two folders:  
+     - `violence` — physical fights without weapons  
+     - `weaponized` — fights where handheld weapons or objects are visible  
+   - The processed videos were converted into 1-second segments, and  
+     the **middle frame** of each was extracted as `.jpg` images to match the SmartCity format.  
+   - Used for **cross-dataset generalization testing** and later **fine-tuning** experiments.
 
 ---
 
@@ -58,9 +67,9 @@ data/
 │
 ├── rwf2000-processed_image/
 │   ├── train_frames/
-│   │   ├── normal/        # NonFight
-│   │   ├── violence/      # Fight
-│   │   └── weaponized/    # (empty or optional)
+│   │   ├── normal/       
+│   │   ├── violence/      
+│   │   └── weaponized/   
 │   └── test_frames/
 │       ├── normal/
 │       ├── violence/
