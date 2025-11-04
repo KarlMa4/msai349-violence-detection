@@ -7,191 +7,50 @@
 
 ---
 
-## 🧩 Project Overview
+## 🧩 Project Summary
 
-This project aims to detect **violent incidents in real-time CCTV footage** to support faster emergency response and public safety.  
+This project explores **violence detection from CCTV videos** using deep learning models.
 
-We build and compare multiple models to classify violence from surveillance videos, progressing from simple **frame-based CNNs** to **temporal models** that analyze motion over time.
+We started with the **SmartCity CCTV Violence Detection (SCVD)** dataset — a small, synthetic dataset containing short clips labeled as:
+- `normal`
+- `violence`
+- `weaponized`
 
-### Datasets Used
-1. **SmartCity CCTV Violence Detection (SCVD)**  
-   - Short, 1-second CCTV clips labeled as:  
-     - `normal` — no violence  
-     - `violence` — physical fights  
-     - `weaponized` — fights involving handheld weapons  
-   - Used for **training** and **within-dataset evaluation**
-
-2. **RWF-2000 (Real-World Fights Dataset)**  
-   - Real surveillance footage of public fights (originally Fight vs NonFight).  
-   - The full dataset (~12 GB, ~2,000 clips) was **too large for initial experiments**,  
-     so we sampled **50 videos per class (100 total)** for quick testing and fine-tuning.  
-   - Data was downloaded via `kagglehub` and filtered using a Python script that  
-     randomly selected balanced subsets of `.avi` files.  
-   - We **manually separated** the `Fight` class into two folders:  
-     - `violence` — physical fights without weapons  
-     - `weaponized` — fights where handheld weapons or objects are visible  
-   - The processed videos were converted into 1-second segments, and  
-     the **middle frame** of each was extracted as `.jpg` images to match the SmartCity format.  
-   - Used for **cross-dataset generalization testing** and later **fine-tuning** experiments.
+From there, we built and compared several models to understand how well deep learning can identify violent behavior.
 
 ---
 
-## 🧠 Current Progress
+## 🧱 Models Trained
 
-### ✅ Environment Setup
-- Virtual environment created with **Python 3.12**
-- Installed dependencies:
-  ```bash
-  pip install -r requirements.txt
-  pip install torch torchvision torchaudio
-  ```
-- Verified GPU support (Apple MPS backend)
+| Model | Description | Main Goal | Key Outcome |
+|:-------|:-------------|:-----------|:-------------|
+| **Baseline CNN (ResNet-18)** | Trained on single frames from SmartCity | Detect violence from appearance | 100% accuracy on SmartCity, but failed on real data (overfitting) |
+| **Fine-Tuned CNN** | Baseline model fine-tuned on RWF-2000 | Domain adaptation | Improved generalization (61% accuracy on RWF-2000) |
+| **CNN + LSTM** | ResNet-18 features + LSTM over 16-frame clips | Capture motion and temporal patterns | Slight improvement, but limited by small dataset (~400 clips) |
 
 ---
 
-### ✅ Data Organization
+## 🧠 What We Learned
 
-Our repository now stores **both datasets** in a unified structure for clarity and flexibility.
-
-```
-data/
-├── smart_city-processed_image/
-│   ├── train_frames/
-│   │   ├── normal/
-│   │   ├── violence/
-│   │   └── weaponized/
-│   └── test_frames/
-│       ├── normal/
-│       ├── violence/
-│       └── weaponized/
-│
-├── rwf2000-processed_image/
-│   ├── train_frames/
-│   │   ├── normal/       
-│   │   ├── violence/      
-│   │   └── weaponized/   
-│   └── test_frames/
-│       ├── normal/
-│       ├── violence/
-│       └── weaponized/
-│
-└── combined/               # optional mixed-domain experiments (future)
-```
+1. **SmartCity data is too limited and clean** — models can memorize the dataset easily but fail to generalize.
+2. **Adding motion modeling (CNN + LSTM)** helped slightly, but not enough with only a few hundred short clips.
+3. **Real-world datasets are essential** — lighting, crowd density, and camera angles in real CCTV differ significantly.
 
 ---
 
-### ✅ Data Processing Scripts
-| Script | Purpose |
-|---------|----------|
-| `src/extract_frames.py` | Extracts the **middle frame** from each short clip (used for 2D CNN) |
-| `src/check_duplicates.py` | Uses **perceptual hashing (pHash)** to verify that SCVD and RWF datasets have **no overlapping images** |
-| `src/dataset_loader.py` | Loads frame datasets with consistent normalization and worker configuration |
+## 🗂 Next Step: Move to a Larger Dataset
+
+We decided to move beyond SmartCity and use **larger, real-world datasets** for better model generalization.  
+Since `.avi` video files were too large and inefficient, we found another dataset containing **~2,000 `.mp4` clips**, which is much lighter and easier to process.  
+
+This new dataset will be the **main focus** moving forward — where we’ll apply transfer learning, motion-aware models (e.g., Bi-LSTM or 3D CNNs), and stronger data augmentation.
 
 ---
 
-### ✅ Model Development
-
-#### **Step 3 – Baseline 2D CNN (ResNet-18)**
-- Trained on SCVD middle-frame images  
-- Achieved **~100% accuracy** on SCVD test data (overfitting)  
-- Demonstrated perfect learning of within-dataset distribution
-
-#### **Cross-Dataset Evaluation (SmartCity → RWF-2000)**
-| Metric | SmartCity Test | RWF-2000 Test |
-|:--------|:---------------|:--------------|
-| Accuracy | 1.00 | 0.40 |
-| Macro F1 | 1.00 | 0.36 |
-
-**Interpretation:**  
-The model performs perfectly on its own dataset but fails to generalize to RWF-2000 due to strong **domain shift** (camera angles, lighting, motion, and environment differences).  
-This confirms **overfitting** and motivates **transfer learning** and **temporal modeling** as next steps.
+## 🧩 Summary
+> Our experiments on SmartCity confirmed that simple CNNs can perfectly fit synthetic data but fail in real-world conditions.  
+> We’re now transitioning to a larger `.mp4`-based dataset to build more robust and realistic violence detection models.
 
 ---
 
-### ✅ Evaluation Visualization
-Each evaluation now includes a **confusion-matrix heatmap** with an overlaid metrics summary:
-
-```
-accuracy = 0.40
-macro precision = 0.47
-macro recall    = 0.43
-macro f1-score  = 0.36
-normal       F1 = 0.31
-violence     F1 = 0.62
-weaponized   F1 = 0.15
-```
-
-These plots are automatically generated in `/results/` for record keeping.
-
----
-
-## 🧩 Next Steps
-
-| Step | Focus | Description |
-|------|--------|-------------|
-| **3A. Fine-Tune Baseline** | 🧠 Transfer Learning | Load SmartCity weights and fine-tune last layers on RWF-2000. Expect performance recovery from 40% → ~80%. |
-| **4. Temporal Modeling** | 🎥 Motion Awareness | Extend to CNN+LSTM or 3D CNN to capture temporal features across frames. |
-| **5. Domain Fusion** | 🌍 Robustness | Train on mixed SmartCity + RWF data to test cross-domain generalization. |
-| **6. Visualization** | 📊 Interpretability | Compare confusion matrices, per-class F1 trends, and frame-level vs video-level predictions. |
-
----
-
-## 📊 Evaluation Metrics
-- **Confusion Matrix** — visual misclassification summary  
-- **Precision / Recall / F1-Score** — per-class balance  
-- **Accuracy & Macro Averages** — overall model performance  
-- **Per-Class F1 Display** — shown on graphs for clear comparison  
-
----
-
-## 🧮 Repository Structure
-
-```
-msai349-violence-detection/
-├── data/
-│   ├── smart_city-processed_image/
-│   └── rwf2000-processed_image/
-├── models/
-│   ├── baseline_cnn.pt
-│   └── ...
-├── src/
-│   ├── extract_frames.py
-│   ├── check_duplicates.py
-│   ├── dataset_loader.py
-│   ├── train_baseline.py
-│   ├── evaluate_baseline.py
-│   └── utils.py
-├── results/
-├── requirements.txt
-└── README.md
-```
-
----
-
-## 🚀 How to Run
-
-```bash
-# 1️⃣ Activate environment
-source venv/bin/activate
-
-# 2️⃣ Extract frames from videos
-python src/extract_frames.py
-
-# 3️⃣ Train baseline CNN
-python src/train_baseline.py
-
-# 4️⃣ Evaluate on both datasets
-python src/evaluate_baseline.py
-```
-
----
-
-## 🧭 Key Insights So Far
-- 2D CNN learns dataset-specific patterns (overfitting).  
-- Cross-dataset testing reveals poor generalization (40%).  
-- RWF-2000 has no overlap with SCVD — datasets are clean.  
-- Next focus: **fine-tuning** and **temporal learning** for real-world robustness.
-
----
-
-**Last Updated:** October 2025
+**Last Updated:** November 2025
