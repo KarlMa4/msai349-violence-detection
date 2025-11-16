@@ -21,6 +21,7 @@ from torchvision import models, transforms, datasets
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
 import matplotlib.pyplot as plt
 import seaborn as sns
+import numpy as np
 
 # -----------------------------------------------------
 # ⚙️ Device
@@ -104,9 +105,18 @@ def build_model(model_type: str, num_classes: int = 2):
     return model
 
 # -----------------------------------------------------
-# 🧪 Evaluation function
+# 🧪 Comprehensive Evaluation Function
 # -----------------------------------------------------
 def evaluate_dataset(model, dataloader, title):
+    """
+    Comprehensive evaluation with multiple metrics:
+    - Per-class metrics (Precision, Recall, F1)
+    - Overall metrics (Accuracy, Macro/Weighted averages)
+    - Confusion matrix visualization
+    - Per-class breakdown tables
+    """
+    from sklearn.metrics import precision_recall_fscore_support
+    
     y_true, y_pred = [], []
     with torch.no_grad():
         for x, labels in dataloader:
@@ -117,32 +127,153 @@ def evaluate_dataset(model, dataloader, title):
             y_pred.extend(preds.cpu().tolist())
 
     target_names = ["non_violence", "violence"]
-    report_dict = classification_report(y_true, y_pred,labels=[0, 1],target_names=["non_violence", "violence"],output_dict=True)
-    acc = accuracy_score(y_true, y_pred)
-
-    print(f"\n📊 {title}\n")
-    print(classification_report(y_true, y_pred,labels=[0, 1],target_names=["non_violence", "violence"]))
-
-    # --- Confusion matrix plot ---
-    cm = confusion_matrix(y_true, y_pred)
-    plt.figure(figsize=(7, 6))
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
-                xticklabels=target_names, yticklabels=target_names)
-    plt.xlabel("Predicted")
-    plt.ylabel("True")
-    plt.title(title)
-
-    summary_text = (
-        f"accuracy = {acc:.2f}\n"
-        f"macro precision = {report_dict['macro avg']['precision']:.2f}\n"
-        f"macro recall    = {report_dict['macro avg']['recall']:.2f}\n"
-        f"macro f1-score  = {report_dict['macro avg']['f1-score']:.2f}"
+    
+    # Get detailed metrics
+    report_dict = classification_report(
+        y_true, y_pred, labels=[0, 1], 
+        target_names=target_names, 
+        output_dict=True
     )
-    plt.gcf().text(1.02, 0.5, summary_text, fontsize=11, va='center', ha='left',
-                   bbox=dict(boxstyle="round,pad=0.4",
-                             facecolor='white', edgecolor='gray', alpha=0.9))
-    plt.tight_layout()
+    
+    precision, recall, f1, support = precision_recall_fscore_support(
+        y_true, y_pred, labels=[0, 1], average=None
+    )
+    
+    acc = accuracy_score(y_true, y_pred)
+    cm = confusion_matrix(y_true, y_pred)
+
+    # ====== Print Header ======
+    print(f"\n{'='*70}")
+    print(f"📊 EVALUATION RESULTS: {title}")
+    print(f"{'='*70}\n")
+
+    # ====== Overall Metrics Table ======
+    print(f"{'OVERALL METRICS':<40} {'Value':<15}")
+    print(f"{'-'*55}")
+    print(f"{'Accuracy':<40} {acc:.4f}")
+    print(f"{'Macro Avg Precision':<40} {report_dict['macro avg']['precision']:.4f}")
+    print(f"{'Macro Avg Recall':<40} {report_dict['macro avg']['recall']:.4f}")
+    print(f"{'Macro Avg F1-Score':<40} {report_dict['macro avg']['f1-score']:.4f}")
+    print(f"{'Weighted Avg Precision':<40} {report_dict['weighted avg']['precision']:.4f}")
+    print(f"{'Weighted Avg Recall':<40} {report_dict['weighted avg']['recall']:.4f}")
+    print(f"{'Weighted Avg F1-Score':<40} {report_dict['weighted avg']['f1-score']:.4f}")
+    print()
+
+    # ====== Per-Class Metrics Table ======
+    print(f"{'PER-CLASS METRICS':<15} {'Precision':<15} {'Recall':<15} {'F1-Score':<15} {'Support':<10}")
+    print(f"{'-'*70}")
+    for i, class_name in enumerate(target_names):
+        print(f"{class_name:<15} {precision[i]:<15.4f} {recall[i]:<15.4f} {f1[i]:<15.4f} {support[i]:<10}")
+    print()
+
+    # ====== Confusion Matrix Details ======
+    print(f"{'CONFUSION MATRIX'}")
+    print(f"{'-'*50}")
+    print(f"                  Predicted Non-Violence  Predicted Violence")
+    print(f"Actual Non-Violence       {cm[0,0]:<20}  {cm[0,1]:<10}")
+    print(f"Actual Violence           {cm[1,0]:<20}  {cm[1,1]:<10}")
+    print()
+
+    # ====== Derived Metrics ======
+    tn, fp, fn, tp = cm[0,0], cm[0,1], cm[1,0], cm[1,1]
+    specificity = tn / (tn + fp) if (tn + fp) > 0 else 0
+    sensitivity = tp / (tp + fn) if (tp + fn) > 0 else 0
+    
+    print(f"{'DERIVED METRICS':<40} {'Value':<15}")
+    print(f"{'-'*55}")
+    print(f"{'Sensitivity (True Positive Rate)':<40} {sensitivity:.4f}")
+    print(f"{'Specificity (True Negative Rate)':<40} {specificity:.4f}")
+    print(f"{'False Positive Rate':<40} {(1-specificity):.4f}")
+    print(f"{'False Negative Rate':<40} {(1-sensitivity):.4f}")
+    print()
+
+    # ====== Full Classification Report ======
+    print(f"{'DETAILED CLASSIFICATION REPORT'}")
+    print(f"{'-'*70}")
+    print(classification_report(y_true, y_pred, labels=[0, 1], target_names=target_names))
+
+    # ====== Visualizations ======
+    # Use GridSpec to reserve a bottom row for interpretation text so it won't be clipped
+    fig = plt.figure(figsize=(16, 8))
+    fig.suptitle(title, fontsize=16, fontweight='bold', y=0.96)
+    gs = fig.add_gridspec(2, 2, height_ratios=[5, 1], hspace=0.3)
+
+    ax0 = fig.add_subplot(gs[0, 0])
+    ax1 = fig.add_subplot(gs[0, 1])
+    ax_text = fig.add_subplot(gs[1, :])
+    ax_text.axis('off')
+
+    # Confusion Matrix Heatmap - Enhanced
+    tn, fp, fn, tp = cm[0,0], cm[0,1], cm[1,0], cm[1,1]
+    cm_normalized = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+
+    # Create annotation text for each cell (count + row-percent)
+    annotations = np.empty_like(cm, dtype=object)
+    annotations[0, 0] = f'{tn}\n({cm_normalized[0,0]:.1%})'
+    annotations[0, 1] = f'{fp}\n({cm_normalized[0,1]:.1%})'
+    annotations[1, 0] = f'{fn}\n({cm_normalized[1,0]:.1%})'
+    annotations[1, 1] = f'{tp}\n({cm_normalized[1,1]:.1%})'
+
+    sns.heatmap(
+        cm, annot=annotations, fmt='', cmap='RdYlGn', vmin=0, vmax=max(cm.max(), 1),
+        xticklabels=['Predicted: Non-Violence', 'Predicted: Violence'],
+        yticklabels=['Actual: Non-Violence', 'Actual: Violence'],
+        ax=ax0, cbar_kws={'label': 'Count'}, annot_kws={'fontsize': 11, 'fontweight': 'bold'},
+        linewidths=2, linecolor='black'
+    )
+    ax0.set_xlabel("Predicted Label", fontsize=12, fontweight='bold')
+    ax0.set_ylabel("Actual Label", fontsize=12, fontweight='bold')
+    ax0.set_title("Confusion Matrix\n(Count + Percentage)", fontsize=12, fontweight='bold', pad=15)
+
+    # Metrics Bar Chart
+    metrics_data = {
+        'Accuracy': acc,
+        'Precision (NV)': precision[0],
+        'Recall (NV)': recall[0],
+        'F1 (NV)': f1[0],
+        'Precision (V)': precision[1],
+        'Recall (V)': recall[1],
+        'F1 (V)': f1[1],
+    }
+    colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b', '#e377c2']
+    bars = ax1.bar(range(len(metrics_data)), list(metrics_data.values()), color=colors, alpha=0.85)
+    ax1.set_xticks(range(len(metrics_data)))
+    ax1.set_xticklabels(metrics_data.keys(), rotation=45, ha='right')
+    ax1.set_ylabel("Score", fontsize=12, fontweight='bold')
+    ax1.set_title("Performance Metrics", fontsize=12, fontweight='bold', pad=15)
+    ax1.set_ylim([0, 1.0])
+    ax1.grid(axis='y', alpha=0.3)
+
+    # Add value labels on bars
+    for bar in bars:
+        height = bar.get_height()
+        ax1.text(
+            bar.get_x() + bar.get_width()/2., height,
+            f'{height:.3f}',
+            ha='center', va='bottom', fontsize=9
+        )
+
+    # Add interpretation text in the reserved bottom row (full width)
+    accuracy_text = (
+        f"✓ True Negatives (TN): {tn} - Correctly identified non-violence\n"
+        f"✗ False Positives (FP): {fp} - Non-violence labeled as violence\n"
+        f"✗ False Negatives (FN): {fn} - Violence labeled as non-violence\n"
+        f"✓ True Positives (TP): {tp} - Correctly identified violence"
+    )
+    ax_text.text(0.01, 0.5, accuracy_text, fontsize=11, family='monospace', va='center')
+
+    plt.tight_layout(rect=[0, 0, 1, 0.95])
     plt.show()
+    
+    return {
+        'accuracy': acc,
+        'precision': precision,
+        'recall': recall,
+        'f1': f1,
+        'sensitivity': sensitivity,
+        'specificity': specificity,
+        'confusion_matrix': cm
+    }
 
 # -----------------------------------------------------
 
