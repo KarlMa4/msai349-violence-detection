@@ -1,10 +1,10 @@
 """
-Evaluate violence-detection models (baseline CNN, CNN+LSTM, 3D CNN).
+Evaluate violence-detection models (baseline CNN, CNN+LSTM).
 
 Usage examples:
-    python src/evaluate_model.py --model cnn       --weights models/baseline_cnn_binary.pt --dataset smartcity
-    python src/evaluate_model.py --model cnn_lstm  --weights models/cnn_lstm_binary.pt    --dataset rwf2000
-    python src/evaluate_model.py --model cnn     --weights models/fine_tuned_rwf_binary.pt       --dataset smartcity
+    python3 src/evaluate_model.py --model cnn       --weights models/baseline_cnn_binary.pt --dataset smartcity
+    python3 src/evaluate_model.py --model cnn_lstm  --weights models/cnn_lstm_binary.pt    --dataset smartcity
+    python3 src/evaluate_model.py --model cnn       --weights models/fine_tuned_rwf_binary.pt --dataset rwf2000
 
 The script:
 1️⃣ Loads the selected model architecture and checkpoint
@@ -98,11 +98,6 @@ def build_model(model_type: str, num_classes: int = 2):
 
         model = CNN_LSTM(num_classes=num_classes)
 
-    elif model_type == "r3d18":
-        from torchvision.models.video import r3d_18
-        model = r3d_18(weights=None)
-        model.fc = nn.Linear(model.fc.in_features, num_classes)
-
     else:
         raise ValueError(f"❌ Unknown model type: {model_type}")
 
@@ -150,41 +145,74 @@ def evaluate_dataset(model, dataloader, title):
     plt.show()
 
 # -----------------------------------------------------
+
+# -----------------------------------------------------
 # 🚀 Main
 # -----------------------------------------------------
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", choices=["cnn", "cnn_lstm", "r3d18"], required=True)
+    parser.add_argument("--model", choices=["cnn", "cnn_lstm"], required=True)
     parser.add_argument("--weights", required=True)
     parser.add_argument("--dataset", choices=["smartcity", "rwf2000"], required=True)
     args = parser.parse_args()
 
-    # Pick dataset path based on model & dataset
+    # -------------------------------------------------
+    # 📂 Resolve dataset path based on selection
+    # -------------------------------------------------
     if args.dataset == "smartcity":
-        path = "data/smart_city-processed_image/test_frames" \
-            if args.model == "cnn" else "data/smart_city-sequences-5s/test"
-    else:  # RWF-2000
-        path = "data/rwf2000-processed_image/test_frames" \
-            if args.model == "cnn" else "data/rwf2000-sequences-5s/test"
+        if args.model == "cnn":
+            path = "data/smart_city-processed_image/test_frames"
+        elif args.model == "cnn_lstm":
+            path = "data/smart_city-sequences-5s/test"
+        else:
+            raise ValueError("❌ Unknown model type for smartcity")
 
-    # Load dataset
+    elif args.dataset == "rwf2000":
+        if args.model == "cnn":
+            path = "data/rwf2000-processed_image/test_frames"
+        elif args.model == "cnn_lstm":
+            path = "data/smart_city-sequences-5s/test"
+        else:
+            raise ValueError("❌ Unknown model type for rwf2000")
+
+    else:
+        raise ValueError(f"❌ Unknown dataset: {args.dataset}")
+
+    # -------------------------------------------------
+    # 🧩 Load dataset
+    # -------------------------------------------------
     if args.model == "cnn":
         base = datasets.ImageFolder(path, transform=transform)
         ds = MergedDataset(base)
-    else:
+
+    elif args.model == "cnn_lstm":
         from dataset_sequence_loader import SequenceDataset
         ds = SequenceDataset(path, num_frames=16, transform=transform)
 
-    loader = torch.utils.data.DataLoader(ds, batch_size=8, shuffle=False, num_workers=0)
+    else:
+        raise ValueError("❌ Unknown model type.")
+
+    loader = torch.utils.data.DataLoader(ds, batch_size=4, shuffle=False, num_workers=0)
     print(f"✅ Loaded {len(ds)} samples from {path}")
 
-    # Load model + weights
+    # -------------------------------------------------
+    # 🧠 Load model + weights
+    # -------------------------------------------------
     model = build_model(args.model, num_classes=2)
-    model.load_state_dict(torch.load(args.weights, map_location=device))
+    weights = torch.load(args.weights, map_location=device)
+
+    # Handle checkpoints with extra keys (e.g., from training script)
+    if isinstance(weights, dict) and "model_state" in weights:
+        model.load_state_dict(weights["model_state"])
+    else:
+        model.load_state_dict(weights)
+
     model.to(device)
     model.eval()
     print(f"✅ Loaded weights from {args.weights}")
 
-    # Evaluate
-    evaluate_dataset(model, loader,
-                     f"{args.model.upper()} on {args.dataset.upper()} test set")
+    # -------------------------------------------------
+    # 📊 Evaluate model
+    # -------------------------------------------------
+    title = f"{args.model.upper()} on {args.dataset.upper()} test set"
+    evaluate_dataset(model, loader, title)
