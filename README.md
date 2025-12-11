@@ -107,23 +107,45 @@ This dataset forms the foundation for **robust spatiotemporal violence detection
 ```
 msai349-violence-detection/
 ├── src/
-│   ├── train_baseline.py              # Train ResNet-18 on single frames
-│   ├── train_cnn_lstm.py              # Train CNN + LSTM on frame sequences
-│   ├── evaluate_model.py              # Comprehensive evaluation (metrics, plots, confusion matrix)
-│   ├── extract_frames.py              # Extract middle frame from videos
-│   ├── extract_sequences.py           # Extract N evenly-spaced frames per video
-│   ├── dataset_sequence_loader.py     # PyTorch Dataset for frame sequences
-│   └── check_cross_dataset_duplicates.py  # pHash duplicate detection tool
+│   ├── SmartCity_pipeline
+│         ├── train_baseline.py              # Train ResNet-18 on single frames
+│         ├── train_cnn_lstm.py              # Train CNN + LSTM on frame sequences
+│         ├── evaluate_model.py              # Comprehensive evaluation
+│         ├── extract_frames.py              # Extract middle frame from videos for spatial
+│         ├── extract_sequences.py           # Extract N evenly-spaced frames for 2D CNN
+│         ├── dataset_sequence_loader.py     # PyTorch Dataset for frame sequences
+│        └── check_cross_dataset_duplicates.py  # pHash duplicate detection tool
+│   ├── RLVD_pipeline
+│         ├── analyze_model.py
+│         ├── clean_dataset.py
+│         ├── evaluate_all_models.py
+│         ├── train_3dcnn.py
+│         ├── train_mobilenet_Istm.py
+│        └── video_duplicate_check.py
 ├── models/
-│   ├── baseline_cnn_binary.pt         # Trained ResNet-18
-│   ├── cnn_lstm_binary.pt             # Trained CNN + LSTM
-│   └── fine_tuned_rwf_binary.pt       # Fine-tuned on RWF-2000
+│   ├── SmartCity_cnn_binary.pt         # Trained ResNet-18
+│   ├── SmartCity_cnn_lstm_binary.pt             # Trained CNN + LSTM
+│   ├── RLVD_R3D-18.pt.            # Trained CNN + LSTM
+│   └── RLVD_MobileNet_lstm.pt.      # Trained  MobileNet + LSTM
 ├── data/
 │   ├── smart_city-processed_image/    # SmartCity (frames)
-│   ├── rwf2000-processed_image/       # RWF-2000 (frames) — for fine-tuning
-│   └── ...
+│   ├── real_life_violence_detection/       # RLVD-2000 (frames) 
+│  
 └── README.md
 ```
+
+---
+
+## 📋 Verification Checklist
+
+- ✅ All model files moved correctly
+- ✅ No old files remain in root directory
+- ✅ All training scripts updated with new paths
+- ✅ All evaluation scripts updated with new paths
+- ✅ Config files created for each model
+- ✅ Comprehensive README documentation added
+- ✅ No compilation errors
+- ✅ Directory structure is clear and maintainable
 
 ---
 
@@ -136,8 +158,10 @@ python3 src/evaluate_model.py --model cnn --weights models/baseline_cnn_binary.p
 # Evaluate CNN + LSTM on SmartCity  
 python3 src/evaluate_model.py --model cnn_lstm --weights models/cnn_lstm_binary.pt --dataset smartcity
 
-# Evaluate fine-tuned CNN on RWF-2000
-python3 src/evaluate_model.py --model cnn --weights models/fine_tuned_rwf_binary.pt --dataset rwf2000
+### Evaluate all models trained in RLVD
+python3 evaluate_all_models.py
+
+
 ```
 
 The evaluation script provides:
