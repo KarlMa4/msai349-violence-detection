@@ -6,7 +6,39 @@
 - Ramakrishna Saravanan (cqp0132)
 
 ---
+## 📂 Repository Structure
 
+```
+msai349-violence-detection/
+├── src/
+│   ├── SmartCity_pipeline
+│         ├── train_baseline.py              # Train ResNet-18 on single frames
+│         ├── train_cnn_lstm.py              # Train CNN + LSTM on frame sequences
+│         ├── evaluate_model.py              # Comprehensive evaluation
+│         ├── extract_frames.py              # Extract middle frame from videos for spatial
+│         ├── extract_sequences.py           # Extract N evenly-spaced frames for 2D CNN
+│         ├── dataset_sequence_loader.py     # PyTorch Dataset for frame sequences
+│         └── check_cross_dataset_duplicates.py  # pHash duplicate detection tool
+│   ├── RLVD_pipeline
+│         ├── analyze_model.py
+│         ├── clean_dataset.py
+│         ├── evaluate_all_models.py
+│         ├── train_3dcnn.py
+│         ├── train_mobilenet_Istm.py
+│         └── video_duplicate_check.py
+├── models/
+│   ├── SmartCity_cnn_binary.pt         # Trained ResNet-18
+│   ├── SmartCity_cnn_lstm_binary.pt             # Trained CNN + LSTM
+│   ├── RLVD_R3D-18.pt.            # Trained CNN + LSTM
+│   └── RLVD_MobileNet_lstm.pt.      # Trained  MobileNet + LSTM
+├── data/
+│   ├── smart_city-processed_image/    # SmartCity (frames)
+│   ├── real_life_violence_detection/       # RLVD-2000 (frames) 
+│  
+└── README.md
+```
+
+---
 ## 🧩 Project Summary
 
 This project explores **violence detection from CCTV videos** using deep learning models.
@@ -26,8 +58,16 @@ From there, we built and compared several models to understand how well deep lea
 The SmartCity dataset contains ~400 short clips categorized into three classes: **normal**, **violence**, and **weaponized**. We merged violence and weaponized into a single **violence class**, resulting in **binary classification (violence vs. non-violence)**. This adjustment mitigated class imbalance and enabled fair comparison across models.
 
 ---
+### Duplicate Detection and Dataset Cleaning
 
-### Baseline Spatial Model: ResNet-18 on Single Frames
+We developed a **perceptual hash (pHash) duplicate detection tool** to identify and remove identical or visually similar frames across both sets. This cleaning process:
+- ✅ Eliminated dataset contamination
+- ✅ Revealed the true model capability (~52% accuracy)
+- ✅ Validated the need for better data and temporal modeling
+
+
+---
+### Spatial Model: ResNet-18 on Single Frames
 
 | Experiment | Accuracy | Observations |
 |:-----------|:---------|:-------------|
@@ -36,28 +76,6 @@ The SmartCity dataset contains ~400 short clips categorized into three classes: 
 | **After pHash duplicate removal** | 52.4% | True performance; spatial features insufficient |
 
 **Key Finding:** The initial 100% accuracy was an artifact of **duplicate/near-duplicate clips** between training and test sets. After cleaning, accuracy dropped dramatically, revealing that spatial features alone cannot reliably detect violence.
-
----
-
-### Duplicate Detection and Dataset Cleaning
-
-We developed a **perceptual hash (pHash) duplicate detection tool** to identify and remove identical or visually similar frames across both sets. This cleaning process:
-- ✅ Eliminated dataset contamination
-- ✅ Revealed the true model capability (~52% accuracy)
-- ✅ Validated the need for better data and temporal modeling
-
----
-
-### Cross-Dataset Fine-Tuning: RWF-2000 → SmartCity
-
-We fine-tuned the baseline ResNet-18 using a small subset of **RWF-2000** videos to test transfer learning:
-- **Result:** Marginal improvement to ~55% accuracy
-- **Insight:** Limited gains indicated:
-  - Partial visual alignment between datasets
-  - RWF-2000 subset too small to offset SmartCity's scarcity
-  - Intrinsic dataset inconsistencies limited transfer learning benefits
-
-**Takeaway:** External data helps, but only modestly without a larger, more coherent primary dataset.
 
 ---
 
@@ -77,17 +95,10 @@ After reaching the spatial modeling ceiling, we extended the architecture with *
 1. **SmartCity data contained duplicates** — revealed by pHash tool; cleaned split showed true baseline at ~52% accuracy.
 2. **Spatial features alone are insufficient** — single-frame ResNet-18 plateaued at 52.4%, even after data cleaning.
 3. **Temporal modeling needs more data** — CNN + LSTM dropped to 38%, indicating the dataset was too small for motion learning.
-4. **Transfer learning has limits** — RWF-2000 fine-tuning improved results only marginally (~3%), confirming dataset scarcity was the core bottleneck.
-5. **Real-world datasets are essential** — SmartCity's synthetic nature, limited diversity, and small size made it unsuitable for robust model training.
 
 ---
 
-## � Transition to Real-Life Violence Dataset (RLVD)
-
-The SmartCity experiments revealed critical limitations:
-- **Data contamination** (duplicate clips between train/test)
-- **Insufficient scale** (~400 clips for spatial + temporal learning)
-- **Synthetic nature** (unrepresentative of real CCTV scenarios)
+## Transition to Real-Life Violence Dataset (RLVD)
 
 We have transitioned to the **Real-Life Violence Dataset (RLVD)**, which contains:
 - ✅ **~2,000 high-quality `.mp4` videos**
@@ -102,52 +113,6 @@ This dataset forms the foundation for **robust spatiotemporal violence detection
 
 ---
 
-## 📂 Repository Structure
-
-```
-msai349-violence-detection/
-├── src/
-│   ├── SmartCity_pipeline
-│         ├── train_baseline.py              # Train ResNet-18 on single frames
-│         ├── train_cnn_lstm.py              # Train CNN + LSTM on frame sequences
-│         ├── evaluate_model.py              # Comprehensive evaluation
-│         ├── extract_frames.py              # Extract middle frame from videos for spatial
-│         ├── extract_sequences.py           # Extract N evenly-spaced frames for 2D CNN
-│         ├── dataset_sequence_loader.py     # PyTorch Dataset for frame sequences
-│        └── check_cross_dataset_duplicates.py  # pHash duplicate detection tool
-│   ├── RLVD_pipeline
-│         ├── analyze_model.py
-│         ├── clean_dataset.py
-│         ├── evaluate_all_models.py
-│         ├── train_3dcnn.py
-│         ├── train_mobilenet_Istm.py
-│        └── video_duplicate_check.py
-├── models/
-│   ├── SmartCity_cnn_binary.pt         # Trained ResNet-18
-│   ├── SmartCity_cnn_lstm_binary.pt             # Trained CNN + LSTM
-│   ├── RLVD_R3D-18.pt.            # Trained CNN + LSTM
-│   └── RLVD_MobileNet_lstm.pt.      # Trained  MobileNet + LSTM
-├── data/
-│   ├── smart_city-processed_image/    # SmartCity (frames)
-│   ├── real_life_violence_detection/       # RLVD-2000 (frames) 
-│  
-└── README.md
-```
-
----
-
-## 📋 Verification Checklist
-
-- ✅ All model files moved correctly
-- ✅ No old files remain in root directory
-- ✅ All training scripts updated with new paths
-- ✅ All evaluation scripts updated with new paths
-- ✅ Config files created for each model
-- ✅ Comprehensive README documentation added
-- ✅ No compilation errors
-- ✅ Directory structure is clear and maintainable
-
----
 
 ## 🚀 How to Run Evaluation
 
@@ -171,7 +136,13 @@ The evaluation script provides:
 - **Visualizations:** Confusion matrix (with row percentages) + performance metrics bar chart
 
 ---
+## 📊 Model Comparison
+| Model | Speed | Accuracy | Input Size |
+|-------|-------|----------|-----------|
+| MobileNet+LSTM | ⚡ Fastest | Good | 112×112×32 |
+| R3D-18 | ⚡ Fast | Very Good | 112×112×16 |
 
+---
 ## 📝 Summary
 
 > **SmartCity experiments confirmed a crucial insight:** perfect accuracy on synthetic data with hidden duplicates does not translate to real-world performance. After removing duplicates, the baseline dropped to ~52% accuracy, and temporal modeling (CNN + LSTM) failed to improve beyond 38% due to insufficient training data.
