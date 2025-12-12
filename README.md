@@ -137,10 +137,10 @@ The evaluation script provides:
 
 ---
 ## 📊 Model Comparison
-| Model | Speed | Accuracy | Input Size |
+| Model | Speed (ms) | Accuracy | Input Size |
 |-------|-------|----------|-----------|
-| MobileNet+LSTM | ⚡ Fastest | Good | 112×112×32 |
-| R3D-18 | ⚡ Fast | Very Good | 112×112×16 |
+| MobileNet+LSTM | 45.8 ms | 85.52 | 112×112×32 |
+| R3D-18 | 123.08 ms | 98.97% | 112×112×16 |
 
 ---
 ## 📝 Summary
